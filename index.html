@@ -1,0 +1,623 @@
+<!doctype html>
+<html>
+<head>
+
+	<title>ROGUE</title>
+
+	<!-- author: Motekye Guakein. 
+	
+		I put meta data in a comment. Because this is 
+		for people reading the source...
+		
+		all scripts and sprites (c) Motekye Guakein. (2016)	-->
+
+
+<script type="text/javascript"> /* ALL FUNCTIONS IMPORTED... */
+
+function el(ID) { if(typeof ID == "object") { return ID; } 
+	else { return document.getElementById(ID); } }
+	
+function hide() {
+  if (typeof arguments[0]=='object') { var e = arguments[0]; }
+  else { var e = document.getElementById(arguments[0]); }
+  e.style.display="none"; }
+
+function create2darray(def, dx, dy) {
+   var f = new Array();
+   for (ix = 0; ix < dx; ix++) {
+	f[ix] = new Array();
+      for (iy = 0; iy < dy; iy++) {
+	  f[ix][iy] = def;
+      }
+   } return f;
+}
+
+function domscale(target){
+  var offT = 0, offR = 0, offB = 0, offL = 0;	// with no buffers set, the 
+  if(arguments.length>=2){offT=arguments[1];}   // element will fill the 
+  if(arguments.length>=3){offR=arguments[2];}   // screen.
+  if(arguments.length>=4){offB=arguments[3];}
+  if(arguments.length>=5){offL=arguments[4];}
+  var cw = window.innerWidth - offR - offL;
+  var ch = window.innerHeight - offT - offB;
+  target.style.position = "fixed";          
+  target.style.top = offT+"px";   
+  target.style.left = offL+"px";
+  target.width = cw; target.height = ch;    
+  target.style.width = cw+"px";   
+  target.style.height = ch+"px"; 
+}
+
+	var key = [];
+	
+	
+	key['shift'] = false;
+	key['ctrl'] = false;
+	key['alt'] = false;
+
+/*		v  set true to get an alert('keycode'); 		   */
+
+	key['alert'] = false;   /*  some keys you dont want alert boxes... */
+	key[168]="disregard";		/*  F5  no alert box on refresh	   */
+	key[74]="disregard";		/*  j  to load javascript console  */
+
+	key['fullctrl'] = false;	/*  true  prevents default keys  */
+
+                                                                            
+document.onkeydown = function(evt){
+  	if(typeof key[evt.which]=="function") { key[evt.which](true); }
+  	else if(evt.which==16) { key['shift'] = true; } 
+	else if(evt.which==17) { key['ctrl'] = true; }
+  	else if(evt.which==18) { key['alt'] = true; }
+  	else if(key['alert']==true && key[evt.which]!="disregard"){ 
+		alert(evt.which); }
+	if(key['fullctrl']) { evt.preventDefault(); }
+}
+		      
+document.onkeyup = function(evt){
+  	if(typeof key[evt.which]=="function") { key[evt.which](false); }
+ 	else if(evt.which==16) { key['shift'] = false; }
+	else if(evt.which==17) { key['ctrl'] = false; }
+  	else if(evt.which==18) { key['alt'] = false; } 
+  	else if(key['alert']==true && key[evt.which]!="disregard"){ 
+		alert(evt.which); } 
+	if(key['fullctrl']) { evt.preventDefault(); } 
+}
+    	/*  necessary evil...  */
+var PictCANVAS = document.createElement('canvas');
+var PictCONTEXT = PictCANVAS.getContext('2d');
+var PictIMG = document.createElement('img');
+	/* creates dom elements for storage, 
+	   but does not link them to the body */
+                
+/*  imgfrom64  takes a dataurl and returns an  ImageData  object  */
+function imgfrom64(source) {
+  PictIMG.src=source;
+  PictCANVAS.width = PictIMG.width;
+  PictCANVAS.height = PictIMG.height;
+  PictCONTEXT.drawImage(PictIMG, 0, 0);
+  return PictCONTEXT.getImageData(0, 0, PictIMG.width, PictIMG.height);
+}
+
+/*  imgto64  takes an  ImageData  object and returns a dataurl  */
+function imgto64(source) {
+if(source.data){
+  PictCANVAS.width = source.width;
+  PictCANVAS.height = source.height;
+  PictCONTEXT.putImageData(source,0,0);
+  return PictCANVAS.toDataURL("image/png");
+} }
+
+/*  newimg  takes dimensions and returns an  ImageData  object  */
+function newimg(w,h) {
+  PictCANVAS.width = w;
+  PictCANVAS.height = h;
+  return PictCONTEXT.getImageData(0,0,w,h);
+}
+	var MF, MX = 0, MY = 0, Mtarget;
+	var btn = [false,false,false];
+function mousetrap(target){	Mtarget = target;
+
+	target.addEventListener('mousedown',function(evt){ 
+	btn[evt.which]=true; MF(); }, false);         /* buttons 1-3 */
+
+	target.addEventListener('mouseup',function(evt){
+	btn[evt.which]=false; }, false);      /* true if button down */
+
+	target.addEventListener('mousemove',function(evt){ 
+	var mrect = Mtarget.getBoundingClientRect();
+	MX = evt.clientX - mrect.left + Mtarget.scrollLeft; 
+	MY = evt.clientY - mrect.top + Mtarget.scrollTop; 
+	MF(); })
+	target.oncontextmenu = function(evt) { btn[btn.length-1]=false; }; 
+}	
+</script>
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		 MICROFRAME		*/
+		/*                                      */
+
+	var MICROFRAME_sec = 0, MICROFRAME_dif = 0, MICROFRAME_lst = 0;
+function microframe(callback,interval){
+	setInterval(function(){
+		MICROFRAME_dif = Date.now() - MICROFRAME_lst;
+		MICROFRAME_lst = Date.now();
+		MICROFRAME_sec = (MICROFRAME_sec + MICROFRAME_dif) % 1000;
+		if(MICROFRAME_sec > interval){
+			MICROFRAME_sec -= interval;
+			callback();			
+		}
+	}, 10);
+}
+</script>	<!-- a very greedy scheduler -->
+
+
+
+
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		  SHUTTER		*/
+		/*                                      */
+
+
+function shutter(target,xoff,yoff){
+	target.style.backgroundPosition = "-"+xoff+"px -"+yoff+"px";
+}
+</script>	<!-- switches sprite on target -->
+
+
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+
+
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		  INPUT			*/
+		/*                                      */
+
+function inputkeys(){
+	key[37] = function(down){
+	    if(down){
+		action='running';
+		direction = 'l'; /* left */
+	    } else {
+		action='standing';
+		direction = 'l';
+	    }
+	}
+	key[38] = function(down){
+	    if(down){
+		action='running';
+		direction = 'u'; /* up */
+	    } else {
+		action='standing';
+		direction = 'u';
+	    }
+	}
+	key[39] = function(down){
+	    if(down){
+		action='running';
+		direction = 'r'; /* right */
+	    } else {
+		action='standing';
+		direction = 'r';
+	    }
+	}
+	key[40] = function(down){
+	    if(down){
+		action='running';
+		direction = 'd'; /* down */
+	    } else {
+		action='standing';
+		direction = 'd';
+	    }
+	}
+}
+</script>
+
+
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+
+
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		  ROGUE			*/
+		/*                                      */
+		
+var CHRogue;	/* = html element containing the sprite */
+
+var direction = 'down';		var xpos = 0;	var Wwidth, Vwidth;
+var action = 'standing';	var ypos = 0;	var Wheight, Vheight;
+				var realx;	var walkspeed = 4;
+var frame = -1;			var realy;	var runspeed = 10;
+
+function showsprite(){	frame++;
+				var thxoff = 0;
+				var thyoff = 0;
+
+	switch(direction){
+		case 'd': thyoff = 0; break;	// different views are 
+		case 'r': thyoff = 16; break;	// stacked on top of
+		case 'u': thyoff = 32; break;   // each-other.
+		case 'l': thyoff = 48; break;
+	}
+
+	switch(action){
+		case 'standing': frame = 0;
+		
+			thxoff = 0;
+		
+		break;
+		
+		case 'running': if(frame==7) { frame = 0; }
+		
+		var gospeed = walkspeed;	/* run */
+		if(key['shift']) { gospeed = runspeed; }
+		
+		var playerrect = CHRogue.getBoundingClientRect();
+		realx = playerrect.left;	/* autoscroll */
+		realy = playerrect.top;
+		
+		  switch(frame){
+			case 1: thxoff = 16; break;
+			case 2: thxoff = 32; break;
+			case 3: thxoff = 48; break;
+			case 4: thxoff = 64; break;
+			case 5: thxoff = 80; break;
+			case 6: thxoff = 96; break;
+		  }
+
+		  switch(direction){
+			case 'd':
+			    if(ClipMap[xpos+8][ypos+12 + gospeed]){ break; }
+			    if(ypos < Wheight-16) { ypos += gospeed;
+			    	if(realy>(Vheight/2)+48) { 
+			    	    el('playarea').scrollBy(0,gospeed); }
+			    }
+			    
+			break;
+			case 'u': 
+			    if(ClipMap[xpos+8][ypos+12 - gospeed]){ break; }
+			    if(ypos > 4) { ypos -= gospeed; 
+			    	if(realy<(Vheight/2)+48) { 
+			    	    el('playarea').scrollBy(0,-1*gospeed); }
+			    }
+			break;
+			case 'r':
+			    if(ClipMap[xpos+12 + gospeed][ypos+12]){ break; }
+			    if(xpos < Wwidth-16) { xpos += gospeed;
+			    	if(realx>(Vwidth/2)+100) { 
+			    	    el('playarea').scrollBy(gospeed,0); }
+			    }
+			break;
+			case 'l': 
+			    if(ClipMap[xpos+4 - gospeed][ypos+12]){ break; }
+			    if(xpos > -1) { xpos -= gospeed; 
+			    	if(realx<(Vwidth/2)+100) { 
+			    	    el('playarea').scrollBy(-1*gospeed,0); }
+			    }
+			break;
+		  }
+		  
+		break;
+	}
+	
+	CHRogue.style.left = xpos+"px";
+	CHRogue.style.top = ypos+"px";
+	
+	shutter(CHRogue,thxoff,thyoff);
+}
+</script>
+
+
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+
+
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		  CLIPPING		*/
+		/*                                      */
+
+
+
+</script>
+
+
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+
+
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		     MAP		*/
+		/*                                      */
+
+var CGROUND = 	"#001122",	MLastX = 0;
+var CWALL = 	"#446688",	MLastY = 0;
+var CVOID =	"#223344";
+		
+var WallLayer, VoidLayer, ClipMap;
+
+function drawclipping(){		// 	mouse function
+	var clipdata = newimg(20,12);
+	coord(MX,MY);
+	
+	if (btn[1]){
+	
+	    digrect(MX-16,MY-16,32,32,20);
+	    
+	}
+
+	MLastX = MX; MLastY = MY;
+}
+
+
+
+		/*	dig out rectangle from map 	*/
+
+
+function digrect(x,y,w,h,wh){
+	VoidLayer.clearRect(x,y-wh,w,h);
+	WallLayer.clearRect(x,y,w,h-wh);
+	
+        for (ix = x-2; ix < x+w+2; ix++) {
+        for (iy = y; iy < y+h-wh; iy++) {
+          if(ix>0&&iy>0&&ix<Wwidth&&iy<Wheight){
+	  ClipMap[ix][iy] = false;
+        } }
+        }
+}
+
+</script>
+
+
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+
+
+
+<script type="text/javascript">
+
+		/*                                      */
+		/*		  ENTITIES		*/
+		/*                                      */
+
+
+
+</script>
+
+
+
+
+
+<script type="text/javascript">
+/* ************************************************************************** */
+
+function redefine(){
+	domscale(el('playarea'),48,100,48,100);
+	Vwidth = el('playarea').width;
+	Vheight = el('playarea').height;
+	el('playarea').scrollTo(0,0);
+}
+
+
+function initialize(){			/*   I N I T I A L I Z E   */
+	
+	
+	/* 		initialize map			*/
+	
+	redefine();
+	
+		Wwidth = 3200;
+		Wheight = 2000;
+	
+	el('walllayer').width = Wwidth;
+	el('walllayer').height = Wheight;
+	WallLayer = el('walllayer').getContext('2d');
+	WallLayer.fillStyle = CWALL;
+	WallLayer.fillRect(0,0,Wwidth,Wheight);
+		
+	el('voidlayer').width = Wwidth;
+	el('voidlayer').height = Wheight;
+	VoidLayer = el('voidlayer').getContext('2d');
+	VoidLayer.fillStyle = CVOID;
+	VoidLayer.fillRect(0,0,Wwidth,Wheight);
+	
+	ClipMap = create2darray(true, Wwidth, Wheight);
+
+	mousetrap(el('voidlayer'));
+		
+	MF = drawclipping;
+	
+
+		
+		
+	/* 		initialize player 		*/
+	
+		xpos = 320;
+		ypos = 320;
+		
+	digrect(240,240,240,240,22)
+
+	CHRogue = el('chrogue');
+	
+	inputkeys();
+	
+	
+		/* go... */
+	
+	microframe(showsprite,80); 	/* very greedy scheduler */
+	
+	setTimeout(function(){ 
+		hide('instkey'); 
+		hide('instmouse');
+		hide('instrefresh');
+		hide('instauthor');
+	},25000);
+}
+
+</script>
+	
+</head>		<!-- body interject -->
+<body onload="initialize();" style="background-color:#123;">	
+
+
+	<!--  	INSTRUCTIONS	    -->
+	
+<p id="instkey" style="
+	position:fixed; z-index:101;
+	top:10%; left:15%;
+	width:25%;
+	text-align:left; color:#468;
+	font-weight:bold; font-size:12px;
+	letter-spacing:1px; line-height:24px;
+	margin:0; padding:0;
+	">keyboard instructions:<br/><br/>
+	arrow keys moves the rogue<br/>
+	hold down shift to run fast</p>
+	
+<p id="instmouse" style="
+	position:fixed; z-index:101;
+	top:10%; right:16%;
+	width:25%;
+	text-align:right; color:#468;
+	font-weight:bold; font-size:12px;
+	letter-spacing:1px; line-height:24px;
+	margin:0; padding:0;
+	">mouse instructions:<br/><br/>
+	use the mouse to dig caves for rogue<br/><br/><br/>
+	buried deep somewhere in this<br/>
+	cavern is a <b style="color:#993;">golden scepter</b></p>
+
+<p id="instrefresh" style="
+	position:fixed; z-index:101;
+	bottom:10%; right:16%;
+	width:25%; font-style:italic;
+	text-align:right; color:#F22;
+	font-weight:bold; font-size:14px; letter-spacing:1px;
+	letter-spacing:1px; line-height:24px;
+	margin:0; padding:0;
+	"><b style="font-size:24px;">Don't refresh!</b><br/><br/>
+	or you'll lose all your progress</p>
+	
+<p id="instauthor" style="
+	position:fixed; z-index:101;
+	bottom:10%; left:15%;
+	width:25%; color:#FFF;
+	text-align:left;
+	font-weight:bold; font-size:12px;
+	letter-spacing:1px; line-height:24px;
+	margin:0; padding:0;
+	">R O G U E &#8212; by Motekye Guakein.</p>
+
+
+	<!--  	READOUTS	-->
+<script type="text/javascript">
+function rd(text){ el('readout').innerHTML = text; }
+</script>
+<p id="readout" style="
+	position:fixed; z-index:100;
+	top:0; left:0;
+	height:32px; width:100%;
+	background-color:#333;
+	text-align:center; color:#CCC;
+	font-weight:bold; font-size:20px;
+	letter-spacing:1px; line-height:32px;
+	margin:0; padding:0;
+	">. - ` ~ _ - R - . - O - . - G - . - U - . - E - _~ ` - .</p>
+
+<script type="text/javascript">
+function coord(x,y){ el('coords').innerHTML = x+" , "+y; }
+</script>
+<p id="coords" style="
+	position:fixed; z-index:101;
+	top:0; right:12px;
+	height:32px; width:100%;
+	text-align:right; color:#444;
+	font-weight:bold; font-size:20px;
+	letter-spacing:1px; line-height:32px;
+	margin:0; padding:0;
+	">,</p>
+
+
+
+	<!-- client frame with scrollbars -->
+<div id="playarea" style="
+	position:fixed;
+	overflow:scroll;
+	">
+
+
+
+	<!-- the actual sprite entity -->
+<div class="shutter" id="chrogue" style="
+	height:16px;
+	width:16px;
+	overflow:hidden;
+	position:absolute;	z-index:50;
+	background-image:url(data:image/png;base64,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);
+	"></div>
+
+
+
+	<!-- the enimies on screen -->
+<ul id="monsters" style="
+	list-style:none;
+	margin:0; padding:0;
+	">
+<!-- li class="rat"></li -->
+<!-- li class="bat"></li -->
+<!-- li class="cat"></li -->
+</ul>
+
+
+
+						<!-- the map layers -->
+<canvas id="voidlayer" style="
+	background-color:transparent;
+	margin:0; padding:0;
+	position:absolute;	z-index:100;
+	">HTML5 required. please upgrade your browser.</canvas>
+
+<canvas id="walllayer" style="
+	background-color:transparent;
+	margin:0; padding:0;
+	position:absolute;	z-index:10;
+	">HTML5 required. please upgrade your browser.</canvas>
+	
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+
+
+
+</div>
+
+
+</body>
+</html><?php exit; ?>
